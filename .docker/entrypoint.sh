@@ -93,23 +93,26 @@ echo "Detecting and excluding escrow files..."
 echo "======================================"
 
 # Find and temporarily move binary (escrow) .lua files
-# grep -rIL finds binary files (escrow-protected lua files)
-ESCROW_FILES=$(grep -rIL . --include="*.lua" $LUACHECK_PATH 2>/dev/null || true)
+mkdir -p /tmp/escrow_backup
+ESCROW_COUNT=0
 
-if [[ ! -z "$ESCROW_FILES" ]]; then
-  echo "Found escrow files to exclude:"
-  echo "$ESCROW_FILES"
+# Find all .lua files in the paths to lint
+for path in $LUACHECK_PATH; do
+  if [ -d "$path" ]; then
+    find "$path" -name "*.lua" -type f 2>/dev/null | while IFS= read -r file; do
+      # Check if file is binary using the file command
+      # Escrow files are reported as "data" instead of "text"
+      if file "$file" | grep -qi "data"; then
+        echo "Found escrow file: $file"
+        mkdir -p "/tmp/escrow_backup/$(dirname "$file")"
+        mv "$file" "/tmp/escrow_backup/$file"
+        echo "Excluded: $file"
+      fi
+    done
+  fi
+done
 
-  # Move escrow files to temp location so luacheck doesn't try to parse them
-  mkdir -p /tmp/escrow_backup
-  echo "$ESCROW_FILES" | while IFS= read -r file; do
-    if [ -f "$file" ]; then
-      mkdir -p "/tmp/escrow_backup/$(dirname "$file")"
-      mv "$file" "/tmp/escrow_backup/$file"
-      echo "Excluded: $file"
-    fi
-  done
-else
+if [ $ESCROW_COUNT -eq 0 ]; then
   echo "No escrow files detected"
 fi
 
