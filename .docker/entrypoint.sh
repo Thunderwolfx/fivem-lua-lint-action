@@ -1,6 +1,6 @@
 #!/bin/sh -l
 CONFIG_PATH=$3
-LUACHECK_ARGS="--default-config $CONFIG_PATH $1"
+LUACHECK_ARGS="--config $CONFIG_PATH $1"
 LUACHECK_PATH="$2"
 LUACHECK_EXIT_ON_WARN="$5"
 ONLY_CHANGED="$7"
@@ -86,6 +86,31 @@ if [ "$ONLY_CHANGED" = "true" ]; then
   LUACHECK_PATH=$(echo "$RESOURCE_FOLDERS" | tr '\n' ' ')
   echo "Updated lint paths: $LUACHECK_PATH"
   echo "======================================"
+fi
+
+echo "======================================"
+echo "Detecting and excluding escrow files..."
+echo "======================================"
+
+# Find and temporarily move binary (escrow) .lua files
+# grep -rIL finds binary files (escrow-protected lua files)
+ESCROW_FILES=$(grep -rIL . --include="*.lua" $LUACHECK_PATH 2>/dev/null || true)
+
+if [[ ! -z "$ESCROW_FILES" ]]; then
+  echo "Found escrow files to exclude:"
+  echo "$ESCROW_FILES"
+
+  # Move escrow files to temp location so luacheck doesn't try to parse them
+  mkdir -p /tmp/escrow_backup
+  echo "$ESCROW_FILES" | while IFS= read -r file; do
+    if [ -f "$file" ]; then
+      mkdir -p "/tmp/escrow_backup/$(dirname "$file")"
+      mv "$file" "/tmp/escrow_backup/$file"
+      echo "Excluded: $file"
+    fi
+  done
+else
+  echo "No escrow files detected"
 fi
 
 echo "======================================"
