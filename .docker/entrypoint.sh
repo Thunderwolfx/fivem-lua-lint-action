@@ -18,24 +18,43 @@ fi
 
 EXIT_CODE=0
 
+echo "======================================"
+echo "Arguments received:"
 echo "Args => 1: $1, 2: $2, 3: $3, 4: $4, 5: $5, 6: $6, 7: $7"
+echo "Config path: $CONFIG_PATH"
+echo "======================================"
+
+# Verify config exists
+if [ -f "$CONFIG_PATH" ]; then
+  echo "✓ Config file exists: $CONFIG_PATH"
+  echo "Config file size: $(wc -l < $CONFIG_PATH) lines"
+else
+  echo "✗ WARNING: Config file not found at: $CONFIG_PATH"
+fi
 
 cd $GITHUB_WORKSPACE
 
 # Detect changed resources if only_changed is enabled
 if [ "$ONLY_CHANGED" = "true" ]; then
+  echo "======================================"
   echo "Detecting changed resource folders..."
+  echo "GITHUB_BASE_REF: $GITHUB_BASE_REF"
+  echo "GITHUB_EVENT_BEFORE: $GITHUB_EVENT_BEFORE"
+  echo "======================================"
 
   # Get the list of changed files
   if [[ ! -z "$GITHUB_BASE_REF" ]]; then
     # For PRs, compare against the base branch
+    echo "Mode: Pull Request (comparing against $GITHUB_BASE_REF)"
     git fetch origin "$GITHUB_BASE_REF" --depth=1
     CHANGED_FILES=$(git diff --name-only "origin/$GITHUB_BASE_REF" HEAD)
   elif [[ ! -z "$GITHUB_EVENT_BEFORE" ]] && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
     # For pushes with previous commit available
+    echo "Mode: Push (comparing against $GITHUB_EVENT_BEFORE)"
     CHANGED_FILES=$(git diff --name-only "$GITHUB_EVENT_BEFORE" HEAD)
   else
     # Fallback: compare with HEAD~1
+    echo "Mode: Fallback (comparing with HEAD~1)"
     CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files)
   fi
 
@@ -57,18 +76,24 @@ if [ "$ONLY_CHANGED" = "true" ]; then
   # Convert newlines to spaces for luacheck
   LUACHECK_PATH=$(echo "$RESOURCE_FOLDERS" | tr '\n' ' ')
   echo "Updated lint paths: $LUACHECK_PATH"
+  echo "======================================"
 fi
 
-echo "outfile => $LUACHECK_CAPTURE_OUTFILE"
+echo "======================================"
+echo "Final luacheck configuration:"
+echo "Paths to lint: $LUACHECK_PATH"
+echo "Luacheck args: $LUACHECK_ARGS"
+echo "Outfile: $LUACHECK_CAPTURE_OUTFILE"
+echo "======================================"
 
 if [[ ! -z "$LUACHECK_CAPTURE_OUTFILE" ]]; then
-  echo "exec => luacheck $LUACHECK_ARGS $LUACHECK_PATH 2>>$LUACHECK_CAPTURE_OUTFILE"
+  echo "exec => luacheck --operators '+=' $LUACHECK_ARGS $LUACHECK_PATH 2>>$LUACHECK_CAPTURE_OUTFILE"
   luacheck --operators "+=" $LUACHECK_ARGS $LUACHECK_PATH >$LUACHECK_CAPTURE_OUTFILE 2>&1 || true
 
-  echo "exec => luacheck $LUACHECK_ARGS --formatter default $LUACHECK_PATH"
+  echo "exec => luacheck --operators '+=' $LUACHECK_ARGS --formatter default $LUACHECK_PATH"
   luacheck --operators "+=" $LUACHECK_ARGS --formatter default $LUACHECK_PATH || EXIT_CODE=$?
 else
-  echo "exec => luacheck $LUACHECK_ARGS $LUACHECK_PATH"
+  echo "exec => luacheck --operators '+=' $LUACHECK_ARGS $LUACHECK_PATH"
   luacheck --operators "+=" $LUACHECK_ARGS $LUACHECK_PATH || EXIT_CODE=$?
 fi
 
