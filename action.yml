@@ -26,6 +26,10 @@ inputs:
     description: "If the action should fail on warnings or not"
     required: false
     default: "false"
+  only_changed:
+    description: "Only lint changed resources (detects changed .lua files and lints entire resource folders)"
+    required: false
+    default: "false"
 runs:
   using: "docker"
   image: "Dockerfile"
@@ -36,3 +40,4 @@ runs:
     - ${{ inputs.capture }}
     - ${{ inputs.fail_on_warnings }}
     - ${{ inputs.extra_libs }}
+    - ${{ inputs.only_changed }}
