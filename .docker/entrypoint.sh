@@ -48,6 +48,9 @@ if [ "$ONLY_CHANGED" = "true" ]; then
   echo "GITHUB_EVENT_BEFORE: $GITHUB_EVENT_BEFORE"
   echo "======================================"
 
+  # Configure git safe directory to allow operations in the workspace
+  git config --global --add safe.directory $GITHUB_WORKSPACE
+
   # Get the list of changed files
   if [[ ! -z "$GITHUB_BASE_REF" ]]; then
     # For PRs, compare against the base branch
