@@ -95,3 +95,5 @@ This feature:
 - Detects changed `.lua` files and extracts their resource folders (first 2 directory levels)
 - Skips linting entirely if no `.lua` files were changed
 - Works with any repository structure where resources are in `category/resource_name/` format
+
+
