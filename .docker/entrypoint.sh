@@ -52,15 +52,22 @@ if [ "$ONLY_CHANGED" = "true" ]; then
   git config --global --add safe.directory $GITHUB_WORKSPACE
 
   # Get the list of changed files
+  # Try to get the before SHA from the GitHub event
+  BEFORE_SHA=""
+  if [ -f "$GITHUB_EVENT_PATH" ]; then
+    # Read the before SHA from the event JSON (works for both push and PR)
+    BEFORE_SHA=$(grep -o '"before"[[:space:]]*:[[:space:]]*"[^"]*"' "$GITHUB_EVENT_PATH" | cut -d'"' -f4)
+  fi
+
   if [[ ! -z "$GITHUB_BASE_REF" ]]; then
     # For PRs, compare against the base branch
     echo "Mode: Pull Request (comparing against $GITHUB_BASE_REF)"
-    git fetch origin "$GITHUB_BASE_REF" --depth=1
-    CHANGED_FILES=$(git diff --name-only "origin/$GITHUB_BASE_REF" HEAD)
-  elif [[ ! -z "$GITHUB_EVENT_BEFORE" ]] && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
-    # For pushes with previous commit available
-    echo "Mode: Push (comparing against $GITHUB_EVENT_BEFORE)"
-    CHANGED_FILES=$(git diff --name-only "$GITHUB_EVENT_BEFORE" HEAD)
+    git fetch origin "$GITHUB_BASE_REF" --depth=1 2>/dev/null || true
+    CHANGED_FILES=$(git diff --name-only "origin/$GITHUB_BASE_REF" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+  elif [[ ! -z "$BEFORE_SHA" ]] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+    # For pushes with before SHA from event (includes all commits in the push)
+    echo "Mode: Push (comparing against $BEFORE_SHA)"
+    CHANGED_FILES=$(git diff --name-only "$BEFORE_SHA" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
   else
     # Fallback: compare with HEAD~1
     echo "Mode: Fallback (comparing with HEAD~1)"
