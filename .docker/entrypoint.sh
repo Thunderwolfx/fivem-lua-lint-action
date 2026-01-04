@@ -2,9 +2,15 @@
 CONFIG_PATH=$3
 LUACHECK_ARGS="--default-config $CONFIG_PATH $1"
 LUACHECK_PATH="$2"
-LUACHECK_CAPTURE_OUTFILE="$GITHUB_WORKSPACE/$4"
 LUACHECK_EXIT_ON_WARN="$5"
 ONLY_CHANGED="$7"
+
+# Only set capture file if arg 4 is not empty
+if [[ ! -z "$4" ]]; then
+  LUACHECK_CAPTURE_OUTFILE="$GITHUB_WORKSPACE/$4"
+else
+  LUACHECK_CAPTURE_OUTFILE=""
+fi
 
 # extra luacheck definitions
 if [[ ! -z "$6" ]]; then
